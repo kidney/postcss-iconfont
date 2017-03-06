@@ -1,6 +1,9 @@
 # postcss-iconfont
 > Create SVG/TTF/EOT/WOFF/WOFF2 fonts from several SVG icons with [PostCSS](http://postcss.org/).
 
+[![npm](https://img.shields.io/npm/v/postcss-iconfont.svg)](https://www.npmjs.com/package/postcss-iconfont)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/kidney/postcss-iconfont/master/LICENSE)
+
 
 
 ## Usage
