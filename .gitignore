@@ -1,0 +1,8 @@
+/test/fixtures/**/dist
+/test/debug.js
+/coverage
+/node_modules
+*.log
+.vscode
+.DS_Store
+.idea

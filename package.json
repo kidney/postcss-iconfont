@@ -1,0 +1,18 @@
+{
+  "name": "postcss-iconfont",
+  "version": "0.9.0",
+  "description": "Create SVG/TTF/EOT/WOFF/WOFF2 fonts from several SVG icons with PostCSS",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "iconfont"
+  ],
+  "author": "kidney",
+  "license": "MIT",
+  "dependencies": {
+    "gulp-iconfont": "^8.0.1",
+    "postcss": "^5.2.14"
+  }
+}
