@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "iconfont"
+    "iconfont",
+    "postcss"
   ],
   "author": "kidney",
   "repository": {
@@ -17,6 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "gulp-iconfont": "^8.0.1",
+    "merge": "^1.2.0",
     "postcss": "^5.2.14"
   }
 }
