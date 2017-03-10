@@ -98,10 +98,11 @@ function runGulpIconFont (queueItem) {
     return new Promise(function (resolve, reject) {
         gulp.src([queueItem.srcPath])
             .pipe(gulpIconfont(queueItem.iconFontOptions))
+            .on('error', function (err) {
+                reject(err);
+            })
             .on('glyphs', function (glyphs, opts) {
                 resolve({glyphs: glyphs, opts: opts});
-            }).on('error', function () {
-                reject();
             }).pipe(gulp.dest(queueItem.outputPath));
     });
 }
@@ -191,6 +192,7 @@ function iconFontPlugin (options) {
     options = merge({
         basePath: process.cwd(),
         outputPath: '',
+        publishPath: '',
         formats: ['svg', 'ttf', 'eot', 'woff']
     }, (options || {}));
 
