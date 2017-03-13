@@ -5,10 +5,14 @@ const merge = require('merge');
 const gulp = require('gulp');
 const gulpIconfont = require('gulp-iconfont');
 
+const POSTCSS_PLUGIN_NAME = 'postcss-iconfont';
+
 function errorLog(msg) {
     console.error(msg);
 }
-
+function isFunction(s) {
+    return typeof s === 'function';
+}
 function trimQuotationMarks(val) {
     return val.replace(/^['"]{0,1}/, '').replace(/['"]{0,1}$/, '');
 }
@@ -83,13 +87,14 @@ function prepare (options, queueItem) {
         fontName: queueItem.fontName,
         log: noop // disabled print log from svgfont2svgicons
     }, options);
-    delete iconFontOptions.basePath;
+    delete iconFontOptions.stylesheetPath;
     delete iconFontOptions.outputPath;
     delete iconFontOptions.publishPath;
+    delete iconFontOptions.hooks;
 
     return {
-        srcPath: path.resolve(options.basePath, queueItem.srcPath),
-        outputPath: path.resolve(options.basePath, options.outputPath),
+        srcPath: path.resolve(options.stylesheetPath, queueItem.srcPath),
+        outputPath: options.outputPath,
         iconFontOptions: iconFontOptions
     };
 }
@@ -127,22 +132,27 @@ function insertFontSrcDeclarations(rule, options, result) {
 }
 
 function insertGlyphsRules(rule, options, result) {
-    result.glyphs.forEach(function (glyph) {
+    // Reverse order
+    // make sure to insert the characters in ascending order
+    let glyphs = result.glyphs.slice(0);
+    let glyphLen = glyphs.length;
+    while (glyphLen--) {
+        let glyph = glyphs[glyphLen];
         let node = postcss.rule({
             selector: '.' + result.opts.fontName + '-' + glyph.name + ':before'
         });
         node.append(postcss.decl({
             prop: 'content',
             value: '\'\\' +
-                glyph.unicode[0]
-                    .charCodeAt(0)
-                    .toString(16)
-                    .toUpperCase()
-                + '\''
+            glyph.unicode[0]
+                .charCodeAt(0)
+                .toString(16)
+                .toUpperCase()
+            + '\''
         }));
 
         rule.parent.insertAfter(rule, node);
-    });
+    }
 
     let node = postcss.rule({
         selector: '[class^="' + result.opts.fontName + '-"], [class*=" ' + result.opts.fontName + '-"]'
@@ -184,16 +194,23 @@ function updateRule(root, options, result) {
         }
     });
 
+    if (isFunction(options.hooks.onUpdateRule)) {
+        options.hooks.onUpdateRule(root, options, result);
+    }
+
     return root;
 }
 
 function iconFontPlugin (options) {
     // merge options
     options = merge({
-        basePath: process.cwd(),
+        stylesheetPath: process.cwd(),
         outputPath: '',
         publishPath: '',
-        formats: ['svg', 'ttf', 'eot', 'woff']
+        formats: ['svg', 'ttf', 'eot', 'woff'],
+        hooks: {
+            onUpdateRule: null
+        }
     }, (options || {}));
 
     return function (root, result) {
@@ -206,11 +223,10 @@ function iconFontPlugin (options) {
         }).spread(function (root) {
 
         }).catch(function (err) {
-            errorLog('postcss-iconfont: An error occurred while processing files - ' + err.message);
+            errorLog(POSTCSS_PLUGIN_NAME + ': An error occurred while processing files - ' + err.message);
             errorLog(err.stack);
             throw err;
         });
     };
 }
-
-module.exports = postcss.plugin('postcss-iconfont', iconFontPlugin);
+module.exports = postcss.plugin(POSTCSS_PLUGIN_NAME, iconFontPlugin);
