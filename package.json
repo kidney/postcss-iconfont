@@ -1,6 +1,6 @@
 {
   "name": "postcss-iconfont",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Create SVG/TTF/EOT/WOFF/WOFF2 fonts from several SVG icons with PostCSS",
   "main": "src/index.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "iconfont",
     "webfont",
     "postcss",
+    "postcss-plugin",
     "tools"
   ],
   "author": "kidney <kidneyleung@gmail.com>",
