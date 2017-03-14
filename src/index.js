@@ -45,7 +45,6 @@ function createFontSrcDeclarations(options, result) {
     }
     return declarationArr.join(', ');
 }
-
 function extractsSVG (root) {
     let queueMap = [];
 
@@ -79,36 +78,46 @@ function extractsSVG (root) {
         });
     });
 
-    return queueMap;
+    return Promise.resolve([queueMap]);
 }
 
-function prepare (options, queueItem) {
-    let iconFontOptions = merge({
-        fontName: queueItem.fontName,
-        log: noop // disabled print log from svgfont2svgicons
-    }, options);
-    delete iconFontOptions.stylesheetPath;
-    delete iconFontOptions.outputPath;
-    delete iconFontOptions.publishPath;
-    delete iconFontOptions.hooks;
+function prepare (options, queueMap) {
+    return Promise.reduce(queueMap, function (newQueueMap, queueItem) {
+        let iconFontOptions = merge({
+            fontName: queueItem.fontName,
+            log: noop // disabled print log from svgfont2svgicons
+        }, options);
+        delete iconFontOptions.stylesheetPath;
+        delete iconFontOptions.outputPath;
+        delete iconFontOptions.publishPath;
+        delete iconFontOptions.hooks;
 
-    return {
-        srcPath: path.resolve(options.stylesheetPath, queueItem.srcPath),
-        outputPath: options.outputPath,
-        iconFontOptions: iconFontOptions
-    };
+        newQueueMap.push({
+            srcPath: path.resolve(options.stylesheetPath, queueItem.srcPath),
+            outputPath: options.outputPath,
+            iconFontOptions: iconFontOptions
+        });
+
+        return Promise.resolve(newQueueMap);
+    }, []).then(function (newQueueMap) {
+        return [newQueueMap];
+    });
 }
 
-function runGulpIconFont (queueItem) {
-    return new Promise(function (resolve, reject) {
-        gulp.src([queueItem.srcPath])
-            .pipe(gulpIconfont(queueItem.iconFontOptions))
-            .on('error', function (err) {
-                reject(err);
-            })
-            .on('glyphs', function (glyphs, opts) {
-                resolve({glyphs: glyphs, opts: opts});
-            }).pipe(gulp.dest(queueItem.outputPath));
+function runGulpIconFont (queueMap) {
+    return Promise.map(queueMap, function (queueItem) {
+        return new Promise(function (resolveItem, rejectItem) {
+            gulp.src([queueItem.srcPath])
+                .pipe(gulpIconfont(queueItem.iconFontOptions))
+                .on('error', function (err) {
+                    rejectItem(err);
+                })
+                .on('glyphs', function (glyphs, opts) {
+                    resolveItem({glyphs, opts});
+                }).pipe(gulp.dest(queueItem.outputPath));
+        });
+    }).then(function (results) {
+        return [results];
     });
 }
 
@@ -177,28 +186,30 @@ function insertGlyphsRules(rule, options, result) {
     rule.parent.insertAfter(rule, node);
 }
 
-function updateRule(root, options, result) {
-    root.walkAtRules('font-face', function (rule) {
-        let isInsert = false;
-        rule.walkDecls('font-family', function (decl) {
-            if (trimQuotationMarks(decl.value) === result.opts.fontName) {
-                isInsert = true;
+function updateRule(root, options, results) {
+    results.forEach(function (item) {
+        root.walkAtRules('font-face', function (rule) {
+            let isInsert = false;
+            rule.walkDecls('font-family', function (decl) {
+                if (trimQuotationMarks(decl.value) === item.opts.fontName) {
+                    isInsert = true;
+                }
+            });
+
+            if (isInsert) {
+                insertFontSrcDeclarations(rule, options, item);
+                insertGlyphsRules(rule, options, item);
+
+                return false;
             }
         });
 
-        if (isInsert) {
-            insertFontSrcDeclarations(rule, options, result);
-            insertGlyphsRules(rule, options, result);
-
-            return false;
+        if (isFunction(options.hooks.onUpdateRule)) {
+            options.hooks.onUpdateRule(root, options, item);
         }
     });
 
-    if (isFunction(options.hooks.onUpdateRule)) {
-        options.hooks.onUpdateRule(root, options, result);
-    }
-
-    return root;
+    return Promise.resolve([root, results]);
 }
 
 function iconFontPlugin (options) {
@@ -207,6 +218,7 @@ function iconFontPlugin (options) {
         stylesheetPath: process.cwd(),
         outputPath: '',
         publishPath: '',
+
         formats: ['svg', 'ttf', 'eot', 'woff'],
         hooks: {
             onUpdateRule: null
@@ -214,19 +226,18 @@ function iconFontPlugin (options) {
     }, (options || {}));
 
     return function (root, result) {
-        return Promise.map(extractsSVG(root), function(queueItem) {
-            return prepare(options, queueItem);
-        }).map(function (queueItem) { // run gulp-iconfont generate fonts.
-            return runGulpIconFont(queueItem);
-        }).map(function (result) { // update css rule.
-            return updateRule(root, options, result);
-        }).spread(function (root) {
-
-        }).catch(function (err) {
-            errorLog(POSTCSS_PLUGIN_NAME + ': An error occurred while processing files - ' + err.message);
-            errorLog(err.stack);
-            throw err;
-        });
+        return extractsSVG(root)
+            .spread(function (queueMap) {
+                return prepare(options, queueMap);
+            }).spread(function (queueMap) { // run gulp-iconfont generate fonts.
+                return runGulpIconFont(queueMap);
+            }).spread(function (results) { // update css rule.
+                return updateRule(root, options, results);
+            }).catch(function (err) {
+                errorLog(POSTCSS_PLUGIN_NAME + ': An error occurred while processing files - ' + err.message);
+                errorLog(err.stack);
+                throw err;
+            });
     };
 }
 module.exports = postcss.plugin(POSTCSS_PLUGIN_NAME, iconFontPlugin);
