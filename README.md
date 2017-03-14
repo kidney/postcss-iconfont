@@ -6,15 +6,19 @@
 
 
 
-## Usage
+`postcss-iconfont` is based on `gulp-iconfont`,  In the `postcss` or `webpack` environment, it is easier to convert `svg` to webfont.
 
-First, install `postcss-iconfont` as a development dependency:
+## Installation
+
+Install `postcss-iconfont` as a development dependency:
 
 ```shell
 npm install postcss-iconfont --save-dev
 ```
 
-Then, 
+
+
+## Usage
 
 ### Node
 
@@ -29,10 +33,7 @@ var options = {
 };
 
 postcss([iconfont(options)])
-    .process(css, {
-        from: './css/style.css',
-        to: './dist/style.css'
-    })
+    .process(css)
     .then(function(result) {
         fs.writeFileSync('./dist/style.css', result.css);
     });
@@ -68,12 +69,143 @@ plugins: [
                     outputPath: './dist/fonts/'
                 })
             ]
-        },
+        }
     }),
 ...
 ]
 ```
 
 
+
+
 ## Options
 
+### stylesheetPath
+
+Relative path to the folder that will keep your stylesheet file.
+
+Type: `String`
+
+Default: `process.cwd()`
+
+
+### outputPath
+
+Relative path to the folder that will keep your output font file.
+
+Type: `String`
+
+Default: ``
+
+
+### publishPath
+
+The url to the output directory resolved relative to the HTML page
+
+Type: `String`
+
+Default: ``
+
+
+### formats
+
+the same `gulp-iconfont`formats
+
+Type: `String`
+
+Default: `['svg', 'ttf', 'eot', 'woff']`
+
+
+### hooks
+
+Type: `Object`
+
+Default: `{}`
+
+#### hooks.onUpdateRule
+Hook that allows to rewrite the CSS output for an image.
+
+Type: `function`
+
+Default: `null`
+
+### options.*
+The [gulp-iconfont](https://github.com/nfroidure/gulp-iconfont/blob/master/README.md#options) are available:
+
+- options.autohint
+- options.fontWeight
+- options.fontStyle
+- options.fixedWidth
+- options.centerHorizontally
+- options.normalize
+- options.fontHeight
+- options.round
+- options.descent
+- options.metadata
+- options.startUnicode
+- options.prependUnicode
+- options.timestamp
+
+
+## Preparing SVG's
+
+See: https://github.com/nfroidure/gulp-iconfont#preparing-svgs
+
+
+
+## Example
+
+```shell
+└┬ demo/
+ ├─┬ css/
+ │ └─ style.css
+ ├── fonts/
+ └─┬ svg/
+   ├─ arrow-up-left.svg
+   └─ arrow-up-right.svg
+```
+
+style.css
+
+```css
+// before
+@font-face {
+  font-family: 'font-awesome';
+  src: url('./fonts/font-awesome/*.svg');
+  font-weight: normal;
+  font-style: normal;
+}
+```
+
+```css
+// after
+@font-face {
+  font-family: 'iconfont';
+  src:  url('fonts/iconfont.eot');
+  src:  url('fonts/iconfont.eot#iefix') format('embedded-opentype'),
+    url('fonts/iconfont.ttf') format('truetype'),
+    url('fonts/iconfont.woff') format('woff'),
+    url('fonts/iconfont.svg?#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+[class^="iconfont-"], [class*=" iconfont-"] {
+  font-family: 'iconfont' !important;
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.iconfont-arrow-up-left:before {
+  content: "\EA01";
+}
+.iconfont-arrow-up-right:before {
+  content: "\EA02";
+}
+```
