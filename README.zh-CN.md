@@ -1,18 +1,16 @@
 # postcss-iconfont
-> Create SVG/TTF/EOT/WOFF/WOFF2 fonts from several SVG icons with [PostCSS](http://postcss.org/).
+> 基于[PostCSS](http://postcss.org/) 处理多个SVG文件生成 SVG/TTF/EOT/WOFF/WOFF2 字体图标
 
 [![npm](https://img.shields.io/npm/v/postcss-iconfont.svg)](https://www.npmjs.com/package/postcss-iconfont)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/kidney/postcss-iconfont/master/LICENSE)
 
 
-[中文文档](https://github.com/kidney/postcss-iconfont/blob/master/README.zh-CN.md)
 
+`postcss-iconfont` 是基于 `gulp-iconfont` 进行封装,  在 `postcss` 或 `webpack` 的构建环境下，能更方便地把 `svg` 文件转换为 webfont。
 
-`postcss-iconfont` is based on `gulp-iconfont`,  In the `postcss` or `webpack` environment, it is easier to convert `svg` to webfont.
+## 安装
 
-## Installation
-
-Install `postcss-iconfont` as a development dependency:
+安装依赖 `postcss-iconfont`:
 
 ```shell
 npm install postcss-iconfont --save-dev
@@ -20,11 +18,11 @@ npm install postcss-iconfont --save-dev
 
 
 
-## Usage
+## 用法
 
 ### Node
 
-Use [iconfont](https://github.com/kidney/postcss-iconfont) in your script:
+在script中使用 [iconfont](https://github.com/kidney/postcss-iconfont) ：
 
 ```javascript
 var postcss = require('postcss');
@@ -43,7 +41,7 @@ postcss([iconfont(options)])
 
 ### Webpack
 
-Use [iconfont](https://github.com/kidney/postcss-iconfont) in your webpack.config.js:
+在 webpack.config.js 中使用  [iconfont](https://github.com/kidney/postcss-iconfont) ：
 
 *Webpack 1.x*
 
@@ -84,57 +82,60 @@ plugins: [
 
 ### stylesheetPath
 
-Relative path to the folder that will keep your stylesheet file.
+样式文件所在的目录路径
 
-Type: `String`
+类型：`String`
 
-Default: `process.cwd()`
+默认值：`process.cwd()`
 
 
 ### outputPath
 
-Relative path to the folder that will keep your output font file.
+生成的字体文件存放目录路径
 
-Type: `String`
+类型：`String`
 
-Default: ``
+默认值：``
 
 
 ### publishPath
 
-The url to the output directory resolved relative to the HTML page
+字体文件的发布路径
 
-Type: `String`
+类型：`String`
 
-Default: ``
+默认值：``
 
 
 ### formats
 
-the same `gulp-iconfont`formats
+生成的字体格式，详细查看 `gulp-iconfont` 的[formats](https://github.com/nfroidure/gulp-iconfont/blob/master/README.md#optionsformats)
 
-Type: `String`
+类型：`String`
 
-Default: `['svg', 'ttf', 'eot', 'woff']`
+默认值：`['svg', 'ttf', 'eot', 'woff']`
 
 
 ### hooks
 
-Type: `Object`
+回调钩子
 
-Default: `{}`
+类型：`Object`
+
+默认值：`{}`
 
 #### hooks.onUpdateRule
-Hook that allows to rewrite the CSS output.
 
-Type: `function`
+更改CSS规则后触发的回调
 
-Default: `null`
+类型：`function`
+
+默认值：`null`
 
 ### options.*
-The [gulp-iconfont](https://github.com/nfroidure/gulp-iconfont/blob/master/README.md#options) are available:
+[gulp-iconfont](https://github.com/nfroidure/gulp-iconfont/blob/master/README.md#options) 的配置也能使用:
 
-- ~~options.fontName~~ (The configuration is invalid, and this value is taken in the style `font-family`)
+- ~~options.fontName~~ （配置无效，这个值在样式中 `font-family` 中获取）
 - options.autohint
 - options.fontWeight
 - options.fontStyle
@@ -150,13 +151,15 @@ The [gulp-iconfont](https://github.com/nfroidure/gulp-iconfont/blob/master/READM
 - options.timestamp
 
 
-## Preparing SVG's
+
+
+## 制作 SVG 文件
 
 See: https://github.com/nfroidure/gulp-iconfont#preparing-svgs
 
 
 
-## Example
+## 例子
 
 ```shell
 └┬ demo/
