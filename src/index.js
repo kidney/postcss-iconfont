@@ -1,4 +1,5 @@
 const path = require('path');
+const url = require('url');
 const Promise = require('bluebird');
 const postcss = require('postcss');
 const merge = require('merge');
@@ -6,6 +7,8 @@ const gulp = require('gulp');
 const gulpIconfont = require('gulp-iconfont');
 
 const POSTCSS_PLUGIN_NAME = 'postcss-iconfont';
+
+const ABSOLUTE_URL = /^\//;
 
 function errorLog(msg) {
     console.error(msg);
@@ -21,80 +24,58 @@ function include(arr,obj) {
 }
 function noop () {}
 
-function createFontSrcDeclarationsWithEOT (options, result) {
-    let fontPath = path.join(options.publishPath, result.opts.fileName);
-    return 'url(\'' + fontPath + '.eot\')';
-}
-
-function createFontSrcDeclarations(options, result) {
-    let fontPath = path.join(options.publishPath, result.opts.fileName);
-    let formats = result.opts.formats;
-
-    let declarationArr = [];
-    if (include(formats, 'eot')) {
-        declarationArr.push('url(\'' + fontPath + '.eot?#iefix\') format(\'embedded-opentype\')');
-    }
-    if (include(formats, 'woff2')) {
-        declarationArr.push('url(\'' + fontPath + '.woff2\') format(\'woff2\')');
-    }
-    if (include(formats, 'woff')) {
-        declarationArr.push('url(\'' + fontPath + '.woff\') format(\'woff\')');
-    }
-    if (include(formats, 'svg')) {
-        declarationArr.push('url(\'' + fontPath + '.svg#' + result.opts.fontName + '\') format(\'svg\')');
-    }
-    return declarationArr.join(', ');
-}
-function extractsSVG (root) {
+function extractsSVG (root, options) {
     let queueMap = [];
 
     // for each font face rule
     root.walkAtRules('font-face', function (rule) {
-        let srcPath;
-        let fontName;
+        let item = {};
 
         rule.walkDecls('src', function (decl) {
             let matchStr = decl.value.match(/^url\(['"]{0,1}(.*\.svg)['"]{0,1}\)/);
             if (matchStr && matchStr[1]) {
-                srcPath = matchStr[1];
+                item.url = matchStr[1];
             }
         });
 
-        // if (!srcPath) {
+        // if (!url) {
         //     error('src declaration not found in font-face rule.');
         // }
         // for each font-family declaration
         rule.walkDecls('font-family', function (decl) {
-            fontName = trimQuotationMarks(decl.value);
+            item.fontName = trimQuotationMarks(decl.value);
         });
 
         // if (!fontName) {
         //     Promise.reject('font-family not found in font-face rule.');
         // }
 
-        queueMap.push({
-            srcPath: srcPath,
-            fontName: fontName
-        });
+        if (ABSOLUTE_URL.test(item.url)) {
+            item.path = path.resolve(options.basePath + item.url);
+        } else {
+            item.path = path.resolve(path.dirname(root.source.input.file), item.url);
+        }
+        queueMap.push(item);
     });
 
     return Promise.resolve([queueMap]);
 }
 
-function prepare (options, queueMap) {
+function prepare (queueMap, options) {
     return Promise.reduce(queueMap, function (newQueueMap, queueItem) {
+        // filter options for gulp-iconfont options with options
         let iconFontOptions = merge({
             fontName: queueItem.fontName,
             log: noop // disabled print log from svgfont2svgicons
         }, options);
+        delete iconFontOptions.basePath;
         delete iconFontOptions.stylesheetPath;
-        delete iconFontOptions.outputPath;
         delete iconFontOptions.publishPath;
         delete iconFontOptions.hooks;
 
         newQueueMap.push({
-            srcPath: path.resolve(options.stylesheetPath, queueItem.srcPath),
-            outputPath: options.outputPath,
+            path: queueItem.path,
+            url: queueItem.url,
             iconFontOptions: iconFontOptions
         });
 
@@ -106,41 +87,78 @@ function prepare (options, queueMap) {
 
 function runGulpIconFont (queueMap) {
     return Promise.map(queueMap, function (queueItem) {
-        return new Promise(function (resolveItem, rejectItem) {
-            gulp.src([queueItem.srcPath])
+        return new Promise(function (resolve, reject) {
+            console.dir(queueItem);
+            gulp.src([queueItem.path])
                 .pipe(gulpIconfont(queueItem.iconFontOptions))
                 .on('error', function (err) {
-                    rejectItem(err);
+                    reject(err);
                 })
                 .on('glyphs', function (glyphs, opts) {
-                    resolveItem({glyphs, opts});
-                }).pipe(gulp.dest(queueItem.outputPath));
+                    resolve({glyphs, opts});
+                }).pipe(gulp.dest(queueItem.iconFontOptions.outputPath));
         });
     }).then(function (results) {
         return [results];
     });
 }
 
+function transformPOSIXSeparator(s) {
+    return s.split(path.sep).join('/');
+}
+
+function createFontSrcDeclarationsWithEOT (stylesheetPath, options, result) {
+    let fontUrl = path.relative(stylesheetPath, path.join(result.opts.outputPath, result.opts.fileName));
+    fontUrl = url.resolve(options.publishPath, transformPOSIXSeparator(fontUrl));
+    return 'url(\'' + fontUrl + '.eot\')';
+}
+
+function createFontSrcDeclarations(stylesheetPath, options, result) {
+    let fontUrl = path.relative(stylesheetPath, path.join(result.opts.outputPath, result.opts.fileName));
+    fontUrl = url.resolve(options.publishPath, transformPOSIXSeparator(fontUrl));
+    let formats = result.opts.formats;
+
+    let declarationArr = [];
+    if (include(formats, 'eot')) {
+        declarationArr.push('url(\'' + fontUrl + '.eot#iefix\') format(\'embedded-opentype\')');
+    }
+    if (include(formats, 'woff2')) {
+        declarationArr.push('url(\'' + fontUrl + '.woff2\') format(\'woff2\')');
+    }
+    if (include(formats, 'woff')) {
+        declarationArr.push('url(\'' + fontUrl + '.woff\') format(\'woff\')');
+    }
+    if (include(formats, 'svg')) {
+        declarationArr.push('url(\'' + fontUrl + '.svg#' + result.opts.fontName + '\') format(\'svg\')');
+    }
+    return declarationArr.join(', \n       ');
+}
 function insertFontSrcDeclarations(rule, options, result) {
+    const stylesheetPath = options.stylesheetPath || path.dirname(rule.parent.source.input.file);
     rule.walkDecls('src', function (decl) {
         // eot for < ie9
         if (include(result.opts.formats, 'eot')) {
             rule.insertBefore(decl, postcss.decl({
                 prop: 'src',
-                value: createFontSrcDeclarationsWithEOT(options, result)
+                value: createFontSrcDeclarationsWithEOT(stylesheetPath, options, result)
             }));
         }
 
         rule.insertBefore(decl, postcss.decl({
             prop: 'src',
-            value: createFontSrcDeclarations(options, result)
+            value: createFontSrcDeclarations(stylesheetPath, options, result)
         }));
 
         decl.remove();
     });
 }
 
-function insertGlyphsRules(rule, options, result) {
+/**
+ * Insert glyphs css rules
+ * @param rule
+ * @param result
+ */
+function insertGlyphsRules(rule, result) {
     // Reverse order
     // make sure to insert the characters in ascending order
     let glyphs = result.glyphs.slice(0);
@@ -187,7 +205,7 @@ function insertGlyphsRules(rule, options, result) {
 }
 
 function updateRule(root, options, results) {
-    results.forEach(function (item) {
+    results.forEach(function (item, index) {
         root.walkAtRules('font-face', function (rule) {
             let isInsert = false;
             rule.walkDecls('font-family', function (decl) {
@@ -198,7 +216,7 @@ function updateRule(root, options, results) {
 
             if (isInsert) {
                 insertFontSrcDeclarations(rule, options, item);
-                insertGlyphsRules(rule, options, item);
+                insertGlyphsRules(rule, item);
 
                 return false;
             }
@@ -215,8 +233,9 @@ function updateRule(root, options, results) {
 function iconFontPlugin (options) {
     // merge options
     options = merge({
-        stylesheetPath: process.cwd(),
-        outputPath: '',
+        basePath: './',
+        stylesheetPath: null,
+        outputPath: './',
         publishPath: '',
 
         formats: ['svg', 'ttf', 'eot', 'woff'],
@@ -226,9 +245,9 @@ function iconFontPlugin (options) {
     }, (options || {}));
 
     return function (root, result) {
-        return extractsSVG(root)
+        return extractsSVG(root, options)
             .spread(function (queueMap) {
-                return prepare(options, queueMap);
+                return prepare(queueMap, options);
             }).spread(function (queueMap) { // run gulp-iconfont generate fonts.
                 return runGulpIconFont(queueMap);
             }).spread(function (results) { // update css rule.
