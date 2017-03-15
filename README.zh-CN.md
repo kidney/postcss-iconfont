@@ -191,7 +191,7 @@ style.css
   src:  url('fonts/iconfont.eot#iefix') format('embedded-opentype'),
     url('fonts/iconfont.ttf') format('truetype'),
     url('fonts/iconfont.woff') format('woff'),
-    url('fonts/iconfont.svg?#icomoon') format('svg');
+    url('fonts/iconfont.svg?#iconfont') format('svg');
   font-weight: normal;
   font-style: normal;
 }
