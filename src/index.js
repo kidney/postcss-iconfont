@@ -88,15 +88,18 @@ function prepare (queueMap, options) {
 function runGulpIconFont (queueMap) {
     return Promise.map(queueMap, function (queueItem) {
         return new Promise(function (resolve, reject) {
-            console.dir(queueItem);
+            let glyphsResult;
             gulp.src([queueItem.path])
-                .pipe(gulpIconfont(queueItem.iconFontOptions))
-                .on('error', function (err) {
+                .pipe(gulpIconfont(queueItem.iconFontOptions)).on('error', function (err) {
                     reject(err);
+                }).on('glyphs', function (glyphs, opts) {
+                    // resolve({glyphs, opts});
+                    glyphsResult = {glyphs, opts};
                 })
-                .on('glyphs', function (glyphs, opts) {
-                    resolve({glyphs, opts});
-                }).pipe(gulp.dest(queueItem.iconFontOptions.outputPath));
+                .pipe(gulp.dest(queueItem.iconFontOptions.outputPath))
+                .on('end', function () {
+                    resolve(glyphsResult);
+                })
         });
     }).then(function (results) {
         return [results];
