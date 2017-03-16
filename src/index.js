@@ -25,40 +25,43 @@ function include(arr,obj) {
 function noop () {}
 
 function extractsSVG (root, options) {
-    let queueMap = [];
+    return new Promise(function (resolve, reject) {
+        let queueMap = [];
 
-    // for each font face rule
-    root.walkAtRules('font-face', function (rule) {
-        let item = {};
+        // for each font face rule
+        root.walkAtRules('font-face', function (rule) {
+            let item = {};
 
-        rule.walkDecls('src', function (decl) {
-            let matchStr = decl.value.match(/^url\(['"]{0,1}(.*\.svg)['"]{0,1}\)/);
-            if (matchStr && matchStr[1]) {
-                item.url = matchStr[1];
+            rule.walkDecls('src', function (decl) {
+                let matchStr = decl.value.match(/^url\(['"]{0,1}(.*\.svg)['"]{0,1}\)/);
+                if (matchStr && matchStr[1]) {
+                    item.url = matchStr[1];
+                }
+            });
+
+            if (!item.url) {
+                return reject('src declaration not found in font-face rule.');
             }
+
+            // for each font-family declaration
+            rule.walkDecls('font-family', function (decl) {
+                item.fontName = trimQuotationMarks(decl.value);
+            });
+
+            if (!item.fontName) {
+                return reject('font-family not found in font-face rule.');
+            }
+
+            if (ABSOLUTE_URL.test(item.url)) {
+                item.path = path.resolve(options.basePath + item.url);
+            } else {
+                item.path = path.resolve(path.dirname(root.source.input.file), item.url);
+            }
+            queueMap.push(item);
         });
 
-        // if (!url) {
-        //     error('src declaration not found in font-face rule.');
-        // }
-        // for each font-family declaration
-        rule.walkDecls('font-family', function (decl) {
-            item.fontName = trimQuotationMarks(decl.value);
-        });
-
-        // if (!fontName) {
-        //     Promise.reject('font-family not found in font-face rule.');
-        // }
-
-        if (ABSOLUTE_URL.test(item.url)) {
-            item.path = path.resolve(options.basePath + item.url);
-        } else {
-            item.path = path.resolve(path.dirname(root.source.input.file), item.url);
-        }
-        queueMap.push(item);
+        resolve([queueMap]);
     });
-
-    return Promise.resolve([queueMap]);
 }
 
 function prepare (queueMap, options) {
@@ -93,7 +96,6 @@ function runGulpIconFont (queueMap) {
                 .pipe(gulpIconfont(queueItem.iconFontOptions)).on('error', function (err) {
                     reject(err);
                 }).on('glyphs', function (glyphs, opts) {
-                    // resolve({glyphs, opts});
                     glyphsResult = {glyphs, opts};
                 })
                 .pipe(gulp.dest(queueItem.iconFontOptions.outputPath))
