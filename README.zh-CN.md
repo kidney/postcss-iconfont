@@ -80,6 +80,14 @@ plugins: [
 
 ## Options
 
+### basePath
+
+根目录位置，通常用于 `font-face` 中 `url` 是绝对路径情况
+
+类型: `String`
+
+默认值: `./`
+
 ### stylesheetPath
 
 样式文件所在的目录路径
@@ -176,8 +184,8 @@ style.css
 ```css
 // before
 @font-face {
-  font-family: 'font-awesome';
-  src: url('./fonts/font-awesome/*.svg');
+  font-family: 'iconfont';
+  src: url('./fonts/*.svg');
   font-weight: normal;
   font-style: normal;
 }
