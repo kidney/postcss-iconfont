@@ -93,14 +93,19 @@ function runGulpIconFont (queueMap) {
         return new Promise(function (resolve, reject) {
             let glyphsResult;
             gulp.src([queueItem.path])
-                .pipe(gulpIconfont(queueItem.iconFontOptions)).on('error', function (err) {
+                .pipe(gulpIconfont(queueItem.iconFontOptions))
+                .on('error', function (err) {
                     reject(err);
                 }).on('glyphs', function (glyphs, opts) {
                     glyphsResult = {glyphs, opts};
                 })
                 .pipe(gulp.dest(queueItem.iconFontOptions.outputPath))
                 .on('end', function () {
-                    resolve(glyphsResult);
+                    if (glyphsResult) {
+                        resolve(glyphsResult);
+                    } else {
+                        reject('file not found');
+                    }
                 })
         });
     }).then(function (results) {
@@ -210,29 +215,33 @@ function insertGlyphsRules(rule, result) {
 }
 
 function updateRule(root, options, results) {
-    results.forEach(function (item, index) {
-        root.walkAtRules('font-face', function (rule) {
-            let isInsert = false;
-            rule.walkDecls('font-family', function (decl) {
-                if (trimQuotationMarks(decl.value) === item.opts.fontName) {
-                    isInsert = true;
+    if (Array.isArray(results) && results.length) {
+        results.forEach(function (item) {
+            root.walkAtRules('font-face', function (rule) {
+                let isInsert = false;
+                rule.walkDecls('font-family', function (decl) {
+                    if (trimQuotationMarks(decl.value) === item.opts.fontName) {
+                        isInsert = true;
+                    }
+                });
+
+                if (isInsert) {
+                    insertFontSrcDeclarations(rule, options, item);
+                    insertGlyphsRules(rule, item);
+
+                    return false;
                 }
             });
 
-            if (isInsert) {
-                insertFontSrcDeclarations(rule, options, item);
-                insertGlyphsRules(rule, item);
-
-                return false;
+            if (isFunction(options.hooks.onUpdateRule)) {
+                options.hooks.onUpdateRule(root, options, item);
             }
         });
 
-        if (isFunction(options.hooks.onUpdateRule)) {
-            options.hooks.onUpdateRule(root, options, item);
-        }
-    });
-
-    return Promise.resolve([root, results]);
+        return Promise.resolve([root, results]);
+    } else {
+        return Promise.reject('updateRule results param not array');
+    }
 }
 
 function iconFontPlugin (options) {
