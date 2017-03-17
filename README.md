@@ -82,13 +82,21 @@ plugins: [
 
 ## Options
 
+### basePath
+
+Your base path that will be used for svg files with absolute CSS urls.
+
+Type: `String`
+
+Default: `./`
+
 ### stylesheetPath
 
 Relative path to the folder that will keep your stylesheet file.
 
 Type: `String`
 
-Default: `process.cwd()`
+Default: `null`
 
 
 ### outputPath
@@ -97,7 +105,7 @@ Relative path to the folder that will keep your output font file.
 
 Type: `String`
 
-Default: ``
+Default: `./`
 
 
 ### publishPath
@@ -173,8 +181,8 @@ style.css
 ```css
 // before
 @font-face {
-  font-family: 'font-awesome';
-  src: url('./fonts/font-awesome/*.svg');
+  font-family: 'iconfont';
+  src: url('./fonts/*.svg');
   font-weight: normal;
   font-style: normal;
 }
