@@ -39,25 +39,21 @@ function extractsSVG (root, options) {
                 }
             });
 
-            if (!item.url) {
-                return reject('src declaration not found in font-face rule.');
-            }
+            if (item.url) {
+                // for each font-family declaration
+                rule.walkDecls('font-family', function (decl) {
+                    item.fontName = trimQuotationMarks(decl.value);
+                });
 
-            // for each font-family declaration
-            rule.walkDecls('font-family', function (decl) {
-                item.fontName = trimQuotationMarks(decl.value);
-            });
-
-            if (!item.fontName) {
-                return reject('font-family not found in font-face rule.');
+                if (item.fontName) {
+                    if (ABSOLUTE_URL.test(item.url)) {
+                        item.path = path.resolve(options.basePath + item.url);
+                    } else {
+                        item.path = path.resolve(path.dirname(root.source.input.file), item.url);
+                    }
+                    queueMap.push(item);
+                }
             }
-
-            if (ABSOLUTE_URL.test(item.url)) {
-                item.path = path.resolve(options.basePath + item.url);
-            } else {
-                item.path = path.resolve(path.dirname(root.source.input.file), item.url);
-            }
-            queueMap.push(item);
         });
 
         resolve([queueMap]);
@@ -104,7 +100,7 @@ function runGulpIconFont (queueMap) {
                     if (glyphsResult) {
                         resolve(glyphsResult);
                     } else {
-                        reject('file not found');
+                        reject(new Error('file not found'));
                     }
                 })
         });
@@ -237,11 +233,8 @@ function updateRule(root, options, results) {
                 options.hooks.onUpdateRule(root, options, item);
             }
         });
-
-        return Promise.resolve([root, results]);
-    } else {
-        return Promise.reject('updateRule results param not array');
     }
+    return Promise.resolve([root, results]);
 }
 
 function iconFontPlugin (options) {
