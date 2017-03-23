@@ -134,6 +134,9 @@ function createFontSrcDeclarations(stylesheetPath, options, result) {
     if (include(formats, 'woff')) {
         declarationArr.push('url(\'' + fontUrl + '.woff\') format(\'woff\')');
     }
+    if (include(formats, 'ttf')) {
+        declarationArr.push('url(\'' + fontUrl + '.ttf\') format(\'truetype\')');
+    }
     if (include(formats, 'svg')) {
         declarationArr.push('url(\'' + fontUrl + '.svg#' + result.opts.fontName + '\') format(\'svg\')');
     }
